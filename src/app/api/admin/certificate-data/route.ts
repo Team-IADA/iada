@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyAdminRequest } from "@/lib/adminAuth";
-import { sql } from "@vercel/postgres";
+import { sql } from "@/lib/pg";
 
 function csvEscape(val: string | number | null | undefined): string {
   const s = val != null ? String(val) : "";
@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { rows } = await sql<{
+  const rows = await sql<{
     award_tier: string | null;
     company_name: string | null;
     report_title: string | null;

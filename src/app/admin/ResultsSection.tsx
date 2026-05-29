@@ -1,4 +1,4 @@
-import { db } from "@vercel/postgres";
+import { pool } from "@/lib/pg";
 import DownloadButton from "./DownloadButton";
 import ResultsTable, { type ResultRow } from "./ResultsTable";
 
@@ -8,7 +8,7 @@ interface Judge {
 }
 
 export default async function ResultsSection() {
-  const client = await db.connect();
+  const client = await pool.connect();
   try {
     const submittedResult = await client.query<{ n: string }>(
       "SELECT COUNT(*) AS n FROM judges WHERE submitted_at IS NOT NULL AND is_active = 1"

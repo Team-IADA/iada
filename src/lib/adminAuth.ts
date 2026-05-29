@@ -1,5 +1,5 @@
 import { cookies } from "next/headers";
-import { sql } from "@vercel/postgres";
+import { sql } from "@/lib/pg";
 
 export const ADMIN_SESSION_COOKIE = "iada_admin_session";
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD ?? "iada-admin-2025";
@@ -22,7 +22,7 @@ export async function getAdminSession(): Promise<boolean> {
   const token = cookieStore.get(ADMIN_SESSION_COOKIE)?.value;
   if (!token) return false;
   try {
-    const { rows } = await sql<{ token: string }>`
+    const rows = await sql<{ token: string }>`
       SELECT token FROM admin_sessions
       WHERE token = ${token} AND expires_at::timestamptz > NOW()
     `;
@@ -42,7 +42,7 @@ export async function verifyAdminRequest(req: Request): Promise<boolean> {
   const token = getAdminTokenFromRequest(req);
   if (!token) return false;
   try {
-    const { rows } = await sql<{ token: string }>`
+    const rows = await sql<{ token: string }>`
       SELECT token FROM admin_sessions
       WHERE token = ${token} AND expires_at::timestamptz > NOW()
     `;

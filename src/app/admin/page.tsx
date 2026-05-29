@@ -1,13 +1,13 @@
 import { redirect } from "next/navigation";
 import { getAdminSession } from "@/lib/adminAuth";
-import { sql } from "@vercel/postgres";
+import { sql } from "@/lib/pg";
 import UploadForm from "./UploadForm";
 import ResetButton from "./ResetButton";
 import DownloadButton from "./DownloadButton";
 import JudgeRow from "./JudgeRow";
 import ResultsSection from "./ResultsSection";
 
-interface JudgeRecord {
+interface JudgeRecord extends Record<string, unknown> {
   id: number;
   name: string;
   access_code: string;
@@ -60,9 +60,9 @@ export default async function AdminPage() {
     `,
   ]);
 
-  const judges = judgesResult.rows;
-  const totalEntries = Number(totalResult.rows[0]?.n ?? 0);
-  const lastUploaded = totalResult.rows[0]?.last_uploaded ?? null;
+  const judges = judgesResult;
+  const totalEntries = Number(totalResult[0]?.n ?? 0);
+  const lastUploaded = totalResult[0]?.last_uploaded ?? null;
 
   return (
     <div className="min-h-screen bg-zinc-50">
@@ -120,7 +120,7 @@ export default async function AdminPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-zinc-100">
-                  {judges.map((judge) => (
+                  {judges.map((judge: JudgeRecord) => (
                     <JudgeRow
                       key={judge.id}
                       id={judge.id}

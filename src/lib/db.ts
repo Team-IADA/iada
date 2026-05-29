@@ -1,21 +1,21 @@
-import { sql } from "@vercel/postgres";
+import { sql } from "@/lib/pg";
 
 export async function getCategories() {
-  const { rows } = await sql<{ id: number; slug: string; name: string; description: string }>`
+  const rows = await sql<{ id: number; slug: string; name: string; description: string }>`
     SELECT * FROM categories ORDER BY name
   `;
   return rows;
 }
 
 export async function getCategoryQuestions(categoryId: number) {
-  const { rows } = await sql<{ id: number; category_id: number; sort_order: number; label: string; description: string }>`
+  const rows = await sql<{ id: number; category_id: number; sort_order: number; label: string; description: string }>`
     SELECT * FROM questions WHERE category_id = ${categoryId} ORDER BY sort_order
   `;
   return rows;
 }
 
 export async function getEntriesForJudge(judgeId: number) {
-  const { rows } = await sql`
+  const rows = await sql`
     SELECT
       e.*,
       c.name AS category_name,
@@ -34,7 +34,7 @@ export async function getEntriesForJudge(judgeId: number) {
 }
 
 export async function getJudgeScoresForEntry(judgeId: number, entryId: number) {
-  const { rows } = await sql<{ id: number; label: string; description: string; score: number | null }>`
+  const rows = await sql<{ id: number; label: string; description: string; score: number | null }>`
     SELECT q.*, s.score
     FROM questions q
     JOIN entries e ON e.category_id = q.category_id AND e.id = ${entryId}
@@ -59,7 +59,7 @@ export async function upsertScore(
 }
 
 export async function getJudgeByToken(token: string) {
-  const { rows } = await sql<{ id: number; name: string; email: string; submitted_at: string | null }>`
+  const rows = await sql<{ id: number; name: string; email: string; submitted_at: string | null }>`
     SELECT j.* FROM judges j
     JOIN judge_sessions s ON s.judge_id = j.id
     WHERE s.token = ${token} AND s.expires_at::timestamptz > NOW() AND j.is_active = 1
@@ -68,7 +68,7 @@ export async function getJudgeByToken(token: string) {
 }
 
 export async function getJudgeByAccessCode(code: string) {
-  const { rows } = await sql<{ id: number; name: string; email: string; access_code: string }>`
+  const rows = await sql<{ id: number; name: string; email: string; access_code: string }>`
     SELECT * FROM judges WHERE access_code = ${code} AND is_active = 1
   `;
   return rows[0] ?? null;

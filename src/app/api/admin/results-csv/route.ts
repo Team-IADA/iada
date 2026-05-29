@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyAdminRequest } from "@/lib/adminAuth";
-import { db } from "@vercel/postgres";
+import { pool } from "@/lib/pg";
 
 function csvEscape(val: string | number | null | undefined): string {
   const s = val != null ? String(val) : "";
@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const client = await db.connect();
+  const client = await pool.connect();
   try {
     const judgesResult = await client.query<{ id: number; name: string }>(
       "SELECT id, name FROM judges WHERE is_active = 1 ORDER BY id"

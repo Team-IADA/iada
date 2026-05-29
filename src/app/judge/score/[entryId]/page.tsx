@@ -1,7 +1,7 @@
 import { redirect, notFound } from "next/navigation";
 import { getSessionJudge } from "@/lib/auth";
 import { getJudgeScoresForEntry } from "@/lib/db";
-import { sql } from "@vercel/postgres";
+import { sql } from "@/lib/pg";
 import ScoreForm from "./ScoreForm";
 
 interface Props {
@@ -35,10 +35,10 @@ export default async function ScorePage({ params }: Props) {
     `,
   ]);
 
-  const entry = entryResult.rows[0] ?? null;
+  const entry = entryResult[0] ?? null;
   if (!entry) notFound();
 
-  const ids = allEntriesResult.rows.map((e) => e.id);
+  const ids = allEntriesResult.map((e) => e.id);
   const currentIndex = ids.indexOf(entry.id);
   const prevId = currentIndex > 0 ? ids[currentIndex - 1] : null;
   const nextId = currentIndex < ids.length - 1 ? ids[currentIndex + 1] : null;

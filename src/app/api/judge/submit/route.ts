@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getJudgeByToken } from "@/lib/db";
-import { sql } from "@vercel/postgres";
+import { sql } from "@/lib/pg";
 import { SESSION_COOKIE } from "@/lib/auth";
 
 export async function POST(req: NextRequest) {

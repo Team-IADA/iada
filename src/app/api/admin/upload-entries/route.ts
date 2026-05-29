@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyAdminRequest } from "@/lib/adminAuth";
-import { db } from "@vercel/postgres";
+import { pool } from "@/lib/pg";
 import { parseEntryRows } from "@/lib/csv";
 
 export async function POST(req: NextRequest) {
@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "No valid rows found in CSV", unmatched: [...unmatched] }, { status: 400 });
   }
 
-  const client = await db.connect();
+  const client = await pool.connect();
 
   // Fetch category slug → id map
   const catResult = await client.query<{ id: number; slug: string }>("SELECT id, slug FROM categories");

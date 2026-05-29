@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyAdminRequest } from "@/lib/adminAuth";
-import { sql } from "@vercel/postgres";
+import { sql } from "@/lib/pg";
 
 export async function GET(req: NextRequest) {
   if (!await verifyAdminRequest(req)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { rows } = await sql<{
+  const rows = await sql<{
     submitter_name: string;
     contact_first_name: string | null;
     contact_last_name: string | null;

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyAdminRequest } from "@/lib/adminAuth";
-import { db } from "@vercel/postgres";
+import { pool } from "@/lib/pg";
 import { parseEntryRows } from "@/lib/csv";
 
 export async function POST(req: NextRequest) {
@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
   let updated = 0;
   let skipped = 0;
 
-  const client = await db.connect();
+  const client = await pool.connect();
   try {
     await client.query("BEGIN");
     for (const row of rows) {
