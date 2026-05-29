@@ -1,5 +1,5 @@
 import { cookies } from "next/headers";
-import { getDB } from "./db";
+import { sql } from "@vercel/postgres";
 
 export const ADMIN_SESSION_COOKIE = "iada_admin_session";
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD ?? "iada-admin-2025";
@@ -10,12 +10,10 @@ export function checkAdminPassword(password: string): boolean {
 
 export async function createAdminSession(): Promise<string> {
   const token = crypto.randomUUID();
-  const expiresAt = new Date(Date.now() + 12 * 60 * 60 * 1000).toISOString(); // 12h
-  const db = getDB();
-  await db
-    .prepare("INSERT INTO admin_sessions (token, expires_at) VALUES (?, ?)")
-    .bind(token, expiresAt)
-    .run();
+  const expiresAt = new Date(Date.now() + 12 * 60 * 60 * 1000).toISOString();
+  await sql`
+    INSERT INTO admin_sessions (token, expires_at) VALUES (${token}, ${expiresAt})
+  `;
   return token;
 }
 
@@ -24,12 +22,11 @@ export async function getAdminSession(): Promise<boolean> {
   const token = cookieStore.get(ADMIN_SESSION_COOKIE)?.value;
   if (!token) return false;
   try {
-    const db = getDB();
-    const row = await db
-      .prepare("SELECT token FROM admin_sessions WHERE token = ? AND expires_at > datetime('now')")
-      .bind(token)
-      .first<{ token: string }>();
-    return row !== null;
+    const { rows } = await sql<{ token: string }>`
+      SELECT token FROM admin_sessions
+      WHERE token = ${token} AND expires_at::timestamptz > NOW()
+    `;
+    return rows.length > 0;
   } catch {
     return false;
   }
@@ -45,12 +42,11 @@ export async function verifyAdminRequest(req: Request): Promise<boolean> {
   const token = getAdminTokenFromRequest(req);
   if (!token) return false;
   try {
-    const db = getDB();
-    const row = await db
-      .prepare("SELECT token FROM admin_sessions WHERE token = ? AND expires_at > datetime('now')")
-      .bind(token)
-      .first<{ token: string }>();
-    return row !== null;
+    const { rows } = await sql<{ token: string }>`
+      SELECT token FROM admin_sessions
+      WHERE token = ${token} AND expires_at::timestamptz > NOW()
+    `;
+    return rows.length > 0;
   } catch {
     return false;
   }

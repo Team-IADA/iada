@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getDB, getJudgeByAccessCode, createSession } from "@/lib/db";
+import { getJudgeByAccessCode, createSession } from "@/lib/db";
 import { SESSION_COOKIE } from "@/lib/auth";
-
-export const runtime = "edge";
 
 export async function GET(req: NextRequest) {
   const code = req.nextUrl.searchParams.get("code");
@@ -10,14 +8,13 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(new URL("/login", req.url));
   }
 
-  const db = getDB();
-  const judge = await getJudgeByAccessCode(db, code.trim().toUpperCase());
+  const judge = await getJudgeByAccessCode(code.trim().toUpperCase());
 
   if (!judge) {
     return NextResponse.redirect(new URL("/login?error=invalid", req.url));
   }
 
-  const token = await createSession(db, judge.id);
+  const token = await createSession(judge.id);
 
   // Overwrite any existing session cookie — this is what makes judge links
   // always log in as the correct judge regardless of who is currently signed in.

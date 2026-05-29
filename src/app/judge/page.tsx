@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { getSessionJudge } from "@/lib/auth";
-import { getDB, getEntriesForJudge } from "@/lib/db";
+import { getEntriesForJudge } from "@/lib/db";
 import Link from "next/link";
 import SubmitSection from "./SubmitSection";
 
@@ -8,8 +8,7 @@ export default async function JudgeDashboard() {
   const judge = await getSessionJudge();
   if (!judge) redirect("/login");
 
-  const db = getDB();
-  const entries = await getEntriesForJudge(db, judge.id) as Array<{
+  const entries = await getEntriesForJudge(judge.id) as Array<{
     id: number;
     entry_code: string;
     title: string;

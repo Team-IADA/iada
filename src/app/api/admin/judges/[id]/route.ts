@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyAdminRequest } from "@/lib/adminAuth";
-import { getDB } from "@/lib/db";
-
-export const runtime = "edge";
+import { sql } from "@vercel/postgres";
 
 export async function PATCH(
   req: NextRequest,
@@ -19,8 +17,7 @@ export async function PATCH(
   const { name } = await req.json() as { name?: string };
   if (!name?.trim()) return NextResponse.json({ error: "Name required" }, { status: 400 });
 
-  const db = getDB();
-  await db.prepare("UPDATE judges SET name = ? WHERE id = ?").bind(name.trim(), id).run();
+  await sql`UPDATE judges SET name = ${name.trim()} WHERE id = ${id}`;
 
   return NextResponse.json({ ok: true });
 }

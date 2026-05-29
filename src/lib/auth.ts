@@ -1,5 +1,5 @@
 import { cookies } from "next/headers";
-import { getDB, getJudgeByToken } from "./db";
+import { getJudgeByToken } from "./db";
 
 export const SESSION_COOKIE = "iada_jury_session";
 
@@ -9,8 +9,7 @@ export async function getSessionJudge() {
   if (!token) return null;
 
   try {
-    const db = getDB();
-    return await getJudgeByToken(db, token);
+    return await getJudgeByToken(token);
   } catch {
     return null;
   }

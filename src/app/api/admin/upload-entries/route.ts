@@ -1,14 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyAdminRequest } from "@/lib/adminAuth";
-import { getDB } from "@/lib/db";
+import { db } from "@vercel/postgres";
 import { parseEntryRows } from "@/lib/csv";
-
-export const runtime = "edge";
-
-function esc(val: string | null | undefined): string {
-  if (!val) return "NULL";
-  return `'${val.replace(/'/g, "''")}'`;
-}
 
 export async function POST(req: NextRequest) {
   if (!await verifyAdminRequest(req)) {
@@ -26,49 +19,50 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "No valid rows found in CSV", unmatched: [...unmatched] }, { status: 400 });
   }
 
-  const db = getDB();
+  const client = await db.connect();
 
   // Fetch category slug → id map
-  const catResult = await db.prepare("SELECT id, slug FROM categories").all<{ id: number; slug: string }>();
-  const slugToId = Object.fromEntries(catResult.results.map((c) => [c.slug, c.id]));
+  const catResult = await client.query<{ id: number; slug: string }>("SELECT id, slug FROM categories");
+  const slugToId = Object.fromEntries(catResult.rows.map((c) => [c.slug, c.id]));
 
-  // Clear existing entries and scores
-  await db.batch([
-    db.prepare("DELETE FROM scores"),
-    db.prepare("DELETE FROM entries"),
-    db.prepare("DELETE FROM sqlite_sequence WHERE name IN ('entries', 'scores')"),
-  ]);
-
-  // Build insert batch
-  const stmts = [];
   let skipped = 0;
+  const validRows = rows.filter((row) => {
+    if (!row.categorySlug || !slugToId[row.categorySlug]) { skipped++; return false; }
+    return true;
+  });
 
-  for (const row of rows) {
-    if (!row.categorySlug) { skipped++; continue; }
-    const categoryId = slugToId[row.categorySlug];
-    if (!categoryId) { skipped++; continue; }
+  try {
+    await client.query("BEGIN");
+    await client.query("DELETE FROM scores");
+    await client.query("DELETE FROM entries");
 
-    stmts.push(
-      db.prepare(`
-        INSERT INTO entries
+    for (const row of validRows) {
+      await client.query(
+        `INSERT INTO entries
           (entry_code, title, category_id, submitter_name, year, award_tier, format, industry,
            contact_name, contact_first_name, contact_last_name, contact_email, country, mailing_address, date, url)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `).bind(
-        row.entryCode, row.title, categoryId, row.submitterName, row.year,
-        row.awardTier || null, row.format || null, row.industry || null,
-        [row.contactFirstName, row.contactLastName].filter(Boolean).join(" ") || null,
-        row.contactFirstName || null, row.contactLastName || null,
-        row.contactEmail || null, row.country || null, row.mailingAddress || null,
-        row.date || null, row.url || null,
-      )
-    );
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)`,
+        [
+          row.entryCode, row.title, slugToId[row.categorySlug!], row.submitterName, row.year,
+          row.awardTier || null, row.format || null, row.industry || null,
+          [row.contactFirstName, row.contactLastName].filter(Boolean).join(" ") || null,
+          row.contactFirstName || null, row.contactLastName || null,
+          row.contactEmail || null, row.country || null, row.mailingAddress || null,
+          row.date || null, row.url || null,
+        ]
+      );
+    }
+
+    await client.query("COMMIT");
+  } catch (e) {
+    await client.query("ROLLBACK");
+    throw e;
+  } finally {
+    client.release();
   }
 
-  if (stmts.length > 0) await db.batch(stmts);
-
   return NextResponse.json({
-    imported: stmts.length,
+    imported: validRows.length,
     skipped,
     unmatched: [...unmatched],
   });

@@ -1,6 +1,7 @@
 import { redirect, notFound } from "next/navigation";
 import { getSessionJudge } from "@/lib/auth";
-import { getDB, getJudgeScoresForEntry } from "@/lib/db";
+import { getJudgeScoresForEntry } from "@/lib/db";
+import { sql } from "@vercel/postgres";
 import ScoreForm from "./ScoreForm";
 
 interface Props {
@@ -12,41 +13,37 @@ export default async function ScorePage({ params }: Props) {
   const judge = await getSessionJudge();
   if (!judge) redirect("/login");
 
-  const db = getDB();
-
-  const [entry, allEntries] = await Promise.all([
-    db
-      .prepare(`
-        SELECT e.*, c.name AS category_name, c.slug AS category_slug
-        FROM entries e
-        JOIN categories c ON c.id = e.category_id
-        WHERE e.id = ? AND e.is_active = 1
-      `)
-      .bind(Number(entryId))
-      .first<{
-        id: number;
-        entry_code: string;
-        title: string;
-        category_name: string;
-        category_slug: string;
-        submitter_name: string | null;
-        format: string | null;
-        industry: string | null;
-        url: string | null;
-      }>(),
-    db
-      .prepare("SELECT id FROM entries WHERE is_active = 1 ORDER BY CAST(entry_code AS INTEGER) ASC")
-      .all<{ id: number }>(),
+  const [entryResult, allEntriesResult] = await Promise.all([
+    sql<{
+      id: number;
+      entry_code: string;
+      title: string;
+      category_name: string;
+      category_slug: string;
+      submitter_name: string | null;
+      format: string | null;
+      industry: string | null;
+      url: string | null;
+    }>`
+      SELECT e.*, c.name AS category_name, c.slug AS category_slug
+      FROM entries e
+      JOIN categories c ON c.id = e.category_id
+      WHERE e.id = ${Number(entryId)} AND e.is_active = 1
+    `,
+    sql<{ id: number }>`
+      SELECT id FROM entries WHERE is_active = 1 ORDER BY entry_code::int ASC
+    `,
   ]);
 
+  const entry = entryResult.rows[0] ?? null;
   if (!entry) notFound();
 
-  const ids = allEntries.results.map((e) => e.id);
+  const ids = allEntriesResult.rows.map((e) => e.id);
   const currentIndex = ids.indexOf(entry.id);
   const prevId = currentIndex > 0 ? ids[currentIndex - 1] : null;
   const nextId = currentIndex < ids.length - 1 ? ids[currentIndex + 1] : null;
 
-  const questions = await getJudgeScoresForEntry(db, judge.id, Number(entryId));
+  const questions = await getJudgeScoresForEntry(judge.id, Number(entryId));
 
   const metaParts = [entry.format, entry.industry, entry.category_name].filter(Boolean);
 

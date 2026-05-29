@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { getAdminSession } from "@/lib/adminAuth";
-import { getDB } from "@/lib/db";
+import { sql } from "@vercel/postgres";
 import UploadForm from "./UploadForm";
 import ResetButton from "./ResetButton";
 import DownloadButton from "./DownloadButton";
@@ -17,7 +17,7 @@ interface JudgeRecord {
 }
 
 function formatDate(iso: string): string {
-  const [date] = iso.split(" ");
+  const [date] = iso.split("T")[0] ? [iso.split("T")[0]] : iso.split(" ");
   const [year, month, day] = date.split("-");
   const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
   return `${parseInt(day)} ${months[parseInt(month) - 1]} ${year}`;
@@ -27,10 +27,8 @@ export default async function AdminPage() {
   const isAdmin = await getAdminSession();
   if (!isAdmin) redirect("/admin/login");
 
-  const db = getDB();
-
   const [judgesResult, totalResult] = await Promise.all([
-    db.prepare(`
+    sql<JudgeRecord>`
       WITH entry_question_counts AS (
         SELECT e.id AS entry_id, COUNT(q.id) AS question_count
         FROM entries e
@@ -53,16 +51,18 @@ export default async function AdminPage() {
       CROSS JOIN entry_question_counts eqc
       LEFT JOIN judge_entry_scores jes ON jes.judge_id = j.id AND jes.entry_id = eqc.entry_id
       WHERE j.is_active = 1
-      GROUP BY j.id
+      GROUP BY j.id, j.name, j.access_code, j.submitted_at
       ORDER BY j.name
-    `).all<JudgeRecord>(),
-    db.prepare("SELECT COUNT(*) AS n, MAX(created_at) AS last_uploaded FROM entries WHERE is_active = 1")
-      .first<{ n: number; last_uploaded: string | null }>(),
+    `,
+    sql<{ n: number; last_uploaded: string | null }>`
+      SELECT COUNT(*) AS n, MAX(created_at) AS last_uploaded
+      FROM entries WHERE is_active = 1
+    `,
   ]);
 
-  const judges = judgesResult.results;
-  const totalEntries = totalResult?.n ?? 0;
-  const lastUploaded = totalResult?.last_uploaded ?? null;
+  const judges = judgesResult.rows;
+  const totalEntries = Number(totalResult.rows[0]?.n ?? 0);
+  const lastUploaded = totalResult.rows[0]?.last_uploaded ?? null;
 
   return (
     <div className="min-h-screen bg-zinc-50">
@@ -99,7 +99,7 @@ export default async function AdminPage() {
             />
             {totalEntries > 0 && lastUploaded && (
               <p className="mt-3 text-xs text-zinc-400">
-                {totalEntries} entries imported · Last uploaded {formatDate(lastUploaded)}
+                {totalEntries} entries imported · Last uploaded {formatDate(String(lastUploaded))}
               </p>
             )}
           </div>
@@ -126,7 +126,7 @@ export default async function AdminPage() {
                       id={judge.id}
                       name={judge.name}
                       accessCode={judge.access_code}
-                      completedEntries={judge.completed_entries}
+                      completedEntries={Number(judge.completed_entries)}
                       totalEntries={totalEntries}
                       submittedAt={judge.submitted_at}
                     />

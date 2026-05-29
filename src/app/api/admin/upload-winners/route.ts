@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyAdminRequest } from "@/lib/adminAuth";
-import { getDB } from "@/lib/db";
+import { db } from "@vercel/postgres";
 import { parseEntryRows } from "@/lib/csv";
-
-export const runtime = "edge";
 
 export async function POST(req: NextRequest) {
   if (!await verifyAdminRequest(req)) {
@@ -21,20 +19,25 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "No valid rows found in CSV" }, { status: 400 });
   }
 
-  const db = getDB();
   let updated = 0;
   let skipped = 0;
 
-  // Update award_tier for each entry matched by entry_code
-  const stmts = rows.map((row) =>
-    db.prepare("UPDATE entries SET award_tier = ? WHERE entry_code = ?")
-      .bind(row.awardTier || null, row.entryCode)
-  );
-
-  const results = await db.batch(stmts);
-  for (const r of results) {
-    if ((r.meta as { changes?: number }).changes) updated++;
-    else skipped++;
+  const client = await db.connect();
+  try {
+    await client.query("BEGIN");
+    for (const row of rows) {
+      const result = await client.query(
+        "UPDATE entries SET award_tier = $1 WHERE entry_code = $2",
+        [row.awardTier || null, row.entryCode]
+      );
+      if (result.rowCount) updated++; else skipped++;
+    }
+    await client.query("COMMIT");
+  } catch (e) {
+    await client.query("ROLLBACK");
+    throw e;
+  } finally {
+    client.release();
   }
 
   return NextResponse.json({ updated, skipped });
