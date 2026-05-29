@@ -1,0 +1,11 @@
+name = "iada-jury"
+compatibility_date = "2024-09-23"
+compatibility_flags = ["nodejs_compat"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "iada-jury-db"
+database_id = "placeholder-replace-after-wrangler-d1-create"
+
+[vars]
+NEXT_PUBLIC_APP_NAME = "IADA Jury Portal"
