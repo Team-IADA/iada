@@ -153,41 +153,17 @@ export default async function AdminPage() {
             <div className="mt-3 border-t border-zinc-200" />
           </div>
 
-          {/* Upload winners */}
-          <div className="bg-white rounded-2xl border border-zinc-200 p-6">
-            <h3 className="text-sm font-semibold text-zinc-900 mb-4">Upload Winners CSV</h3>
-            <UploadForm
-              endpoint="/api/admin/upload-winners"
-              label="Upload"
-              description="Same format as entries CSV. Updates award_tier for each entry matched by entry_no."
-            />
-          </div>
-
           {/* Downloads */}
-          <div className="bg-white rounded-2xl border border-zinc-200 p-6 space-y-6">
-            <div>
-              <h3 className="text-sm font-semibold text-zinc-900 mb-1">Generate Mailing List</h3>
-              <p className="text-xs text-zinc-500 mb-3">
-                Downloads a numbered .txt file with company name, contact, and address for each entry.
-              </p>
-              <DownloadButton
-                endpoint="/api/admin/mailing-list"
-                filename="iada-mailing-list.txt"
-                label="Download .txt"
-              />
-            </div>
-
-            <div className="border-t border-zinc-100 pt-6">
-              <h3 className="text-sm font-semibold text-zinc-900 mb-1">Generate Certificate Data</h3>
-              <p className="text-xs text-zinc-500 mb-3">
-                Downloads a .csv ready for InDesign Data Merge with award tier, company, report title, and contact fields.
-              </p>
-              <DownloadButton
-                endpoint="/api/admin/certificate-data"
-                filename="iada-certificate-data.csv"
-                label="Download .csv"
-              />
-            </div>
+          <div className="bg-white rounded-2xl border border-zinc-200 p-6">
+            <h3 className="text-sm font-semibold text-zinc-900 mb-1">Generate Mailing List</h3>
+            <p className="text-xs text-zinc-500 mb-3">
+              Downloads a numbered .txt file with company name, contact, and address for each entry.
+            </p>
+            <DownloadButton
+              endpoint="/api/admin/mailing-list"
+              filename="iada-mailing-list.txt"
+              label="Download .txt"
+            />
           </div>
         </section>
 

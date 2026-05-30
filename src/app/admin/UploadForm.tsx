@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
+import { useRouter } from "next/navigation";
 
 interface Props {
   endpoint: string;
@@ -10,6 +11,7 @@ interface Props {
 }
 
 export default function UploadForm({ endpoint, label, description, onSuccess }: Props) {
+  const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
   const [status, setStatus] = useState<"idle" | "uploading" | "success" | "error">("idle");
   const [message, setMessage] = useState("");
@@ -43,6 +45,7 @@ export default function UploadForm({ endpoint, label, description, onSuccess }: 
     setMessage(parts.join(" · ") || "Done");
     if (inputRef.current) inputRef.current.value = "";
     onSuccess?.(data);
+    router.refresh();
   }
 
   return (
