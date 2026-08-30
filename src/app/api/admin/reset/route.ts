@@ -12,6 +12,7 @@ export async function POST(req: NextRequest) {
     await client.query("BEGIN");
     await client.query("DELETE FROM scores");
     await client.query("DELETE FROM entries");
+    await client.query("UPDATE judges SET submitted_at = NULL");
     await client.query("COMMIT");
   } catch (e) {
     await client.query("ROLLBACK");
