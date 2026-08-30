@@ -102,7 +102,7 @@ export function parseEntryRows(csvText: string): {
     const entryCode = col(row, "entry_no", "entry no");
     if (!entryCode) continue;
 
-    const rawCategory = col(row, "design_categories", "design categories");
+    const rawCategory = col(row, "mailing_address", "mailing address");
     const categorySlug = matchCategorySlug(rawCategory);
     if (!categorySlug) {
       unmatched.add(rawCategory || "(empty)");
@@ -121,7 +121,7 @@ export function parseEntryRows(csvText: string): {
       contactLastName: col(row, "contact_last_name", "contact last name"),
       contactEmail: col(row, "email"),
       country: col(row, "country"),
-      mailingAddress: col(row, "mailing_address", "mailing address"),
+      mailingAddress: col(row, "design_categories", "design categories"),
       date: col(row, "date"),
       url: col(row, "url"),
     });

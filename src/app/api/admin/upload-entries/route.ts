@@ -35,6 +35,7 @@ export async function POST(req: NextRequest) {
     await client.query("BEGIN");
     await client.query("DELETE FROM scores");
     await client.query("DELETE FROM entries");
+    await client.query("UPDATE judges SET submitted_at = NULL");
 
     for (const row of validRows) {
       await client.query(
