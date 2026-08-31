@@ -16,7 +16,6 @@ export default async function ResultsSection() {
     const judges = judgesResult.rows;
     if (judges.length === 0) return null;
 
-    // Judge IDs are integers from our own DB — safe to embed in SQL
     const judgeCols = judges
       .map((j: Judge, i: number) => `COALESCE(SUM(CASE WHEN s.judge_id = ${j.id} THEN s.score END), 0) AS j${i + 1}_total`)
       .join(",\n        ");
