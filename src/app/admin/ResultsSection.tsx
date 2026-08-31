@@ -1,45 +1,50 @@
-import { pool } from "@/lib/pg";
+import { sql, pool } from "@/lib/pg";
 import DownloadButton from "./DownloadButton";
 import ResultsTable, { type ResultRow } from "./ResultsTable";
 
-interface Judge {
+interface Judge extends Record<string, unknown> {
   id: number;
   name: string;
 }
 
 export default async function ResultsSection() {
-  return <h2 style={{ color: "red", padding: "2rem" }}>RESULTS SECTION IS RENDERING</h2>;
-  const client = await pool.connect();
   try {
-    const judgesResult = await client.query<Judge>(
-      "SELECT id, name FROM judges WHERE is_active = 1 ORDER BY id"
-    );
-    const judges = judgesResult.rows;
+    const judges = await sql<Judge>`
+      SELECT id, name FROM judges WHERE is_active = 1 ORDER BY id
+    `;
+
     if (judges.length === 0) return null;
 
     const judgeCols = judges
-      .map((j: Judge, i: number) => `COALESCE(SUM(CASE WHEN s.judge_id = ${j.id} THEN s.score END), 0) AS j${i + 1}_total`)
+      .map((j, i) => `COALESCE(SUM(CASE WHEN s.judge_id = ${j.id} THEN s.score END), 0) AS j${i + 1}_total`)
       .join(",\n        ");
 
-    const rawResult = await client.query<Record<string, unknown>>(`
-      SELECT
-        e.entry_code,
-        e.submitter_name,
-        e.title,
-        c.name AS category_name,
-        COUNT(DISTINCT q.id) AS question_count,
-        ${judgeCols},
-        COALESCE(SUM(s.score), 0) AS combined_total
-      FROM entries e
-      JOIN categories c ON c.id = e.category_id
-      JOIN questions q ON q.category_id = e.category_id
-      LEFT JOIN scores s ON s.entry_id = e.id AND s.question_id = q.id
-      WHERE e.is_active = 1
-      GROUP BY e.id, e.entry_code, e.submitter_name, e.title, c.name
-    `);
+    const client = await pool.connect();
+    let rawRows: Record<string, unknown>[] = [];
+    try {
+      const rawResult = await client.query<Record<string, unknown>>(`
+        SELECT
+          e.entry_code,
+          e.submitter_name,
+          e.title,
+          c.name AS category_name,
+          COUNT(DISTINCT q.id) AS question_count,
+          ${judgeCols},
+          COALESCE(SUM(s.score), 0) AS combined_total
+        FROM entries e
+        JOIN categories c ON c.id = e.category_id
+        JOIN questions q ON q.category_id = e.category_id
+        LEFT JOIN scores s ON s.entry_id = e.id AND s.question_id = q.id
+        WHERE e.is_active = 1
+        GROUP BY e.id, e.entry_code, e.submitter_name, e.title, c.name
+      `);
+      rawRows = rawResult.rows;
+    } finally {
+      client.release();
+    }
 
     const judgeCount = judges.length;
-    const rows: ResultRow[] = rawResult.rows.map((r: Record<string, unknown>) => {
+    const rows: ResultRow[] = rawRows.map((r) => {
       const questionCount = Number(r.question_count);
       const combinedTotal = Number(r.combined_total);
       const maxPossible = questionCount * 10 * judgeCount;
@@ -52,7 +57,7 @@ export default async function ResultsSection() {
         title: r.title as string,
         category_name: r.category_name as string,
         question_count: questionCount,
-        judge_totals: judges.map((_: Judge, i: number) => Number(r[`j${i + 1}_total`])),
+        judge_totals: judges.map((_, i) => Number(r[`j${i + 1}_total`])),
         combined_total: combinedTotal,
         max_possible: maxPossible,
         final_score: finalScore,
@@ -79,11 +84,11 @@ export default async function ResultsSection() {
             />
           </div>
 
-          <ResultsTable rows={rows} judgeNames={judges.map((j: Judge) => j.name)} />
+          <ResultsTable rows={rows} judgeNames={judges.map((j) => j.name)} />
         </div>
       </section>
     );
-  } finally {
-    client.release();
+  } catch {
+    return null;
   }
 }
