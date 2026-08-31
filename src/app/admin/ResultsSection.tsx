@@ -8,6 +8,7 @@ interface Judge {
 }
 
 export default async function ResultsSection() {
+  return <h2 style={{ color: "red", padding: "2rem" }}>RESULTS SECTION IS RENDERING</h2>;
   const client = await pool.connect();
   try {
     const judgesResult = await client.query<Judge>(
