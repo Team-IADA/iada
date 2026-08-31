@@ -10,11 +10,6 @@ interface Judge {
 export default async function ResultsSection() {
   const client = await pool.connect();
   try {
-    const submittedResult = await client.query<{ n: string }>(
-      "SELECT COUNT(*) AS n FROM judges WHERE submitted_at IS NOT NULL AND is_active = 1"
-    );
-    if (Number(submittedResult.rows[0]?.n ?? 0) === 0) return null;
-
     const judgesResult = await client.query<Judge>(
       "SELECT id, name FROM judges WHERE is_active = 1 ORDER BY id"
     );
